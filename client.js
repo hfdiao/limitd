@@ -13,8 +13,6 @@ var DEFAULT_HOST = 'localhost';
 var PbRequestMessage   = require('./messages/protocol_buffers').Request;
 var PbResponseMessage  = require('./messages/protocol_buffers').Response;
 
-var AvroResponse = require('./messages/avro')['Response/Index'];
-var AvroRequest = require('./messages/avro')['Request/Index'];
 
 // This client is deprecated. Use:
 //    npm install limitd-client --save
@@ -37,17 +35,13 @@ function LimitdClient (options, done) {
 util.inherits(LimitdClient, EventEmitter);
 
 LimitdClient.prototype._responseDecoder = function () {
-  var protocol = this._options.protocol;
   return through2.obj(function (chunk, enc, callback) {
     var decoded;
     try {
-      decoded = protocol === 'protocol-buffers' ?
-                  PbResponseMessage.decode(chunk) :
-                  AvroResponse.fromBuffer(chunk);
+      decoded = PbResponseMessage.decode(chunk);
     } catch(err) {
       return callback(err);
     }
-
     callback(null, decoded);
   });
 };
@@ -94,8 +88,10 @@ LimitdClient.prototype.connect = function (done) {
       done();
     }
   }).on('close', function (has_error) {
+    console.log('close');
     client.emit('close', has_error);
   }).on('error', function (err) {
+    console.log(err);
     client.emit('error', err);
   }).connect(options.port, options.address || options.hostname || options.host);
 };

@@ -1,27 +1,26 @@
-var EventEmitter = require('events').EventEmitter;
+const EventEmitter = require('events').EventEmitter;
 
-var util   = require('util');
-var logger = require('./lib/logger');
-var _      = require('lodash');
-var net = require('net');
-var Buckets = require('./lib/buckets');
+const util   = require('util');
+const logger = require('./lib/logger');
+const _      = require('lodash');
+const net = require('net');
+const Buckets = require('./lib/buckets');
 
-var ResponseWriter = require('./lib/pipeline/response_writer');
-var RequestHandler = require('./lib/pipeline/request_handler');
-var RequestDecoder = require('./lib/pipeline/request_decoder');
-var lps = require('length-prefixed-stream');
-var lps_encode = require('./lib/lps_encode');
-var validateConfig = require('./lib/config_validator');
-var agent = require('auth0-instrumentation');
+const RequestHandler = require('./lib/pipeline/RequestHandler');
+const RequestDecoder = require('./lib/pipeline/RequestDecoder');
+const ResponseEncoder = require('./lib/pipeline/ResponseEncoder');
+const lps = require('length-prefixed-stream');
+const lps_encode = require('./lib/lps_encode');
+const validateConfig = require('./lib/config_validator');
+const agent = require('auth0-instrumentation');
 
-var db = require('./lib/db');
-var enableDestroy = require('server-destroy');
+const db = require('./lib/db');
+const enableDestroy = require('server-destroy');
 
-var defaults = {
+const defaults = {
   port:      9231,
   hostname:  '0.0.0.0',
-  log_level: 'info',
-  protocol:  'protocol-buffers'
+  log_level: 'info'
 };
 
 /*
@@ -75,8 +74,8 @@ function LimitdServer (options) {
 util.inherits(LimitdServer, EventEmitter);
 
 LimitdServer.prototype._handler = function (socket) {
-  var sockets_details = _.pick(socket, ['remoteAddress', 'remotePort']);
-  var log = this._logger;
+  const sockets_details = _.pick(socket, ['remoteAddress', 'remotePort']);
+  const log = this._logger;
 
   socket.on('error', function (err) {
     log.debug(_.extend(sockets_details, {
@@ -91,30 +90,26 @@ LimitdServer.prototype._handler = function (socket) {
 
   log.debug(sockets_details, 'connection accepted');
 
-  var decoder = RequestDecoder({ protocol: this._config.protocol });
+  const decoder = new RequestDecoder();
 
   decoder.on('error', function () {
     log.debug(sockets_details, 'unknown message format');
     return socket.end();
   });
 
-  var response_writer = ResponseWriter({protocol: this._config.protocol});
-
-  var request_handler = RequestHandler({
-    protocol: this._config.protocol,
+  const request_handler = new RequestHandler({
     buckets: this._buckets,
     logger: this._logger,
-    write: (response) => {
-      response_writer.write(response);
-    }
   });
 
-  response_writer.pipe(lps_encode())
-                 .pipe(socket);
+  const encoder = new ResponseEncoder();
 
   socket.pipe(lps.decode())
         .pipe(decoder)
-        .pipe(request_handler);
+        .pipe(request_handler)
+        .pipe(encoder)
+        .pipe(lps_encode())
+        .pipe(socket);
 };
 
 LimitdServer.prototype.start = function (done) {

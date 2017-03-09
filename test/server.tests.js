@@ -1,90 +1,24 @@
-var LimitdServer = require('..').Server;
-var LimitdClient = require('..').Client;
+const LimitdServer = require('..').Server;
+const LimitdClient = require('..').Client;
 
-var assert = require('chai').assert;
-var expect = require('chai').expect;
-var rimraf = require('rimraf');
-var path   = require('path');
+const assert   = require('chai').assert;
+const expect   = require('chai').expect;
+const rimraf   = require('rimraf');
+const path     = require('path');
+const async    = require('async');
+const _        = require('lodash');
+const MockDate = require('mockdate');
+
 var client;
-var async = require('async');
-var _ = require('lodash');
-var Redis = require('ioredis');
-var MockDate = require('mockdate');
-
 describe('limitd server', function () {
-  describe('on leveldb', function () {
-    var db_file = path.join(__dirname, 'dbs', 'server.tests.db');
+  var db_file = path.join(__dirname, 'dbs', 'server.tests.db');
 
-    try{
-      rimraf.sync(db_file);
-    } catch(err){}
+  try{
+    rimraf.sync(db_file);
+  } catch(err){}
 
-    run_tests({db: db_file});
-  });
+  const db_options = { db: db_file };
 
-  // describe('leveldb + avro ', function () {
-  //   var db_file = path.join(__dirname, 'dbs', 'server_avro.tests.db');
-
-  //   try{
-  //     rimraf.sync(db_file);
-  //   } catch(err){}
-
-  //   run_tests({db: db_file, protocol: 'avro'});
-  // });
-
-  // describe('on redis', function () {
-  //   var redis_options = {
-  //     backend: 'redis',
-  //     host: '127.0.0.1',
-  //     keyPrefix: 'limitd-tests:'
-  //   };
-
-  //   before(function (done) {
-  //     var redis = new Redis(redis_options);
-
-  //     redis.keys('limitd*', function (err, keys) {
-  //       keys.forEach(function (key) {
-  //         redis.del(key.replace(redis_options.keyPrefix, ''));
-  //       });
-  //     });
-
-  //     setTimeout(done, 100);
-  //   });
-
-
-  //   run_tests({ db: redis_options });
-  // });
-
-  // describe.skip('on redis cluster', function () {
-  //   var redis_options = {
-  //     backend: 'redis',
-  //     keyPrefix: 'limitd-tests:',
-  //     nodes: [
-  //       {
-  //         host: '127.0.0.1'
-  //       }
-  //     ]
-  //   };
-
-  //   before(function (done) {
-  //     var redis = new Redis(redis_options);
-
-  //     redis.keys('limitd*', function (err, keys) {
-  //       keys.forEach(function (key) {
-  //         redis.del(key.replace(redis_options.keyPrefix, ''));
-  //       });
-  //     });
-
-  //     setTimeout(done, 100);
-  //   });
-
-
-  //   run_tests({ db: redis_options });
-  // });
-});
-
-
-function run_tests (db_options) {
   var server;
 
   before(function (done) {
@@ -468,5 +402,6 @@ function run_tests (db_options) {
     });
 
   });
+});
 
-}
+
