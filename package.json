@@ -40,6 +40,7 @@
     "ms": "~0.7.1",
     "protobufjs": "^6.6.5",
     "randomstring": "~1.0.3",
+    "readable-stream": "^2.2.3",
     "reconnect-net": "0.0.0",
     "server-destroy": "^1.0.1",
     "stream-combiner": "~0.2.2",

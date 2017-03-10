@@ -1,14 +1,14 @@
-const path         = require('path');
-const async        = require('async');
-const rimraf       = require('rimraf');
-const _            = require('lodash');
-const Stats        = require('fast-stats').Stats;
-const Table        = require('cli-table');
-const spawn        = require('child_process').spawn;
-const cluster      = require('cluster');
-const os = require('os');
+const path    = require('path');
+const async   = require('async');
+const rimraf  = require('rimraf');
+const _       = require('lodash');
+const Stats   = require('fast-stats').Stats;
+const Table   = require('cli-table');
+const spawn   = require('child_process').spawn;
+const cluster = require('cluster');
+const os      = require('os');
 
-const requests = 100000;
+const requests =  100000;
 const concurrency = 1000;
 
 function spawn_server() {
@@ -18,15 +18,36 @@ function spawn_server() {
     rimraf.sync(db_file);
   } catch(err){}
 
-  const limitd_args = ['--config-file', 'config.yml'];
-
   const run_with_profile = process.argv.indexOf('--profile') > -1;
+  const flame_graph = process.argv.indexOf('--0x') > -1;
+
+
+  var limitd_args = [
+                      path.normalize(__dirname + '/../bin/limitd'),
+                      '--config-file',
+                      'config.yml'
+                    ];
+
+  if (flame_graph) {
+    limitd_args = [
+      'node',
+      '--trace-hydrogen',
+      '--trace-phase=Z',
+      '--trace-deopt',
+      '--code-comments',
+      '--hydrogen-track-positions',
+      '--redirect-code-traces',
+      '--redirect-code-traces-to=code.asm'
+    ].concat(limitd_args);
+  }
 
   if (run_with_profile) {
     limitd_args.push('--profile');
   }
 
-  return spawn(`${path.normalize(__dirname + '/../bin/limitd')}`, limitd_args, { stdio: 'inherit' });
+  const executable = flame_graph ? '0x' : 'node';
+
+  return spawn(executable, limitd_args, { stdio: 'inherit' });
 }
 
 function render_results(started_at, results) {
@@ -57,7 +78,7 @@ function render_results(started_at, results) {
 if (cluster.isMaster) {
   process.title = 'limitd perfomance master';
 
-  const results = [];
+  var results = [];
   const cores = os.cpus().length;
   const started_at = new Date();
 
@@ -68,10 +89,10 @@ if (cluster.isMaster) {
 
   workers.forEach((worker) => {
     worker.once('message', (message) => {
-      results.push(message.results);
-      if (results.length === cores) {
+      results = results.concat(message.results);
+      if (results.length === cores * requests) {
         render_results(started_at, _.flatten(results));
-        server.kill();
+        server.kill('SIGINT');
       }
       worker.kill();
     });
@@ -98,8 +119,8 @@ function run_tests () {
     const date = new Date();
     const client = clients.shift();
     clients.push(client);
-    // return client.take('ip', '10.0.0.1', function (err, result) {
-    return client.take('ip', `${process.pid}-${i}-pipi`, function (err, result) {
+    return client.take('ip', '10.0.0.1', function (err, result) {
+    // return client.take('ip', `${process.pid}-${i}-pipi`, function (err, result) {
       if (err) {
         console.dir(err);
         return process.exit(1);
