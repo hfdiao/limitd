@@ -1,22 +1,8 @@
-var ProtoBuf = require('protobufjs');
-var path = require('path');
+require('protobufjs/src/parse').defaults.keepCase = true;
 
-var decode = ProtoBuf.Reflect.Message.Field.prototype.decode;
+const ProtoBuf  = require('protobufjs');
+const path      = require('path');
+const protoPath = path.join(__dirname, '/../protocol/Index.proto');
+const builder   = ProtoBuf.loadSync(protoPath);
 
-ProtoBuf.Reflect.Message.Field.prototype.decode = function () {
-  var value = decode.apply(this, arguments);
-  if (ProtoBuf.TYPES["enum"] === this.type) {
-    var values = this.resolvedType.children;
-    for (var i=0; i<values.length; i++){
-      if (values[i].id == value){
-        return values[i].name;
-      }
-    }
-  }
-  return value;
-};
-
-
-var builder = ProtoBuf.loadProtoFile(path.join(__dirname, "/../protocol/Index.proto"));
-
-module.exports = builder.build("limitd");
+module.exports = builder.lookup('limitd');

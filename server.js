@@ -76,7 +76,6 @@ util.inherits(LimitdServer, EventEmitter);
 LimitdServer.prototype._handler = function (socket) {
   const sockets_details = _.pick(socket, ['remoteAddress', 'remotePort']);
   const log = this._logger;
-
   socket.on('error', function (err) {
     log.debug(_.extend(sockets_details, {
       err: {
@@ -92,8 +91,8 @@ LimitdServer.prototype._handler = function (socket) {
 
   const decoder = new RequestDecoder();
 
-  decoder.on('error', function () {
-    log.debug(sockets_details, 'unknown message format');
+  decoder.on('error', function (err) {
+    log.error(_.extend(sockets_details, { err }), 'Error detected in the request pipeline.');
     return socket.end();
   });
 

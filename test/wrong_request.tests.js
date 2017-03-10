@@ -14,7 +14,11 @@ describe('wrong requests', function () {
       rimraf.sync(db_file);
     } catch(err){}
 
-    server = new LimitdServer(_.extend({db: db_file}, require('./fixture')));
+    server = new LimitdServer(_.extend({
+      db: db_file
+    }, require('./fixture'), {
+      log_level: 'fatal'
+    }));
 
     server.start(function (err, addr) {
       if (err) return done(err);
@@ -33,9 +37,9 @@ describe('wrong requests', function () {
     // I'm going to make the server fail by sending a Response message from the client.
     socket.connect(address.port, address.address)
       .once('connect', function () {
-        socket.write(new ResponseMessage({
+        socket.write(ResponseMessage.encodeDelimited({
           request_id: '123'
-        }).encodeDelimited().toBuffer());
+        }).finish());
       }).once('close', function () {
         done();
       });

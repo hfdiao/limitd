@@ -1,5 +1,5 @@
 const LimitdServer = require('..').Server;
-const LimitdClient = require('..').Client;
+const LimitdClient = require('limitd-client');
 
 const assert   = require('chai').assert;
 const expect   = require('chai').expect;
@@ -26,7 +26,7 @@ describe('limitd server', function () {
 
     server.start(function (err, address) {
       if (err) return done(err);
-      client = new LimitdClient(_.extend(address, { protocol: db_options.protocol }));
+      client = new LimitdClient(`limitd://localhost:${address.port}`);
       client.once('connect', done);
     });
   });

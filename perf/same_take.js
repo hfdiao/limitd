@@ -7,12 +7,32 @@ const Table        = require('cli-table');
 const ProgressBar  = require('progress');
 const cluster      = require('cluster');
 const LimitdServer = require('../server');
-
-const protocol = process.argv.indexOf('--avro')  > -1 ? 'avro' : 'protocol-buffers';
+const profiler     = require('v8-profiler');
+const fs           = require('fs');
 
 if (cluster.isMaster) {
-  var db_file = path.join(__dirname, 'db', 'perf.tests.db');
+  process.title = 'limitd server';
 
+  const run_with_profile = process.argv.indexOf('--profile') > -1;
+
+  const db_file = path.join(__dirname, 'db', 'perf.tests.db');
+
+  if (run_with_profile) {
+    console.log('starting profiler');
+    profiler.startProfiling('1', true);
+  }
+
+  // var fs = require('fs');
+  // var profile1 = profiler.stopProfiling();
+  // profiler.startProfiling('2', true);
+  // var profile2 = profiler.stopProfiling();
+
+  // console.log(snapshot1.getHeader(), snapshot2.getHeader());
+
+  // profile1.export(function(error, result) {
+  //   fs.writeFileSync('profile1.json', result);
+  //   profile1.delete();
+  // });
 
   try{
     rimraf.sync(db_file);
@@ -21,7 +41,6 @@ if (cluster.isMaster) {
   var server = new LimitdServer({
     db:        db_file,
     log_level: 'error',
-    protocol:  protocol,
     buckets: {
       ip: {
         size: 1000,
@@ -44,14 +63,29 @@ if (cluster.isMaster) {
     cluster.fork({LIMITD_HOST: `limitd://${address.address}:${address.port}`});
   });
 
-  cluster.on('exit', (worker, code) => process.exit(code));
+  cluster.on('exit', (worker, code) => {
+    if (!run_with_profile) {
+      return process.exit(code);
+    }
+
+    var profile = profiler.stopProfiling();
+
+    profile.export()
+      .pipe(fs.createWriteStream(`${Date.now()}.cpuprofile`))
+      .on('finish', function() {
+        profile.delete();
+        process.exit(code);
+      });
+  });
 
   return;
 }
 
+process.title = 'limitd client';
+
 const LimitdClient = require('limitd-client');
 
-const client = new LimitdClient({ protocol: protocol, timeout: '60s', host: process.env.LIMITD_HOST });
+const client = new LimitdClient({ timeout: '60s', host: process.env.LIMITD_HOST });
 
 client.once('ready', run_tests);
 
@@ -60,8 +94,8 @@ function run_tests () {
   var client = this;
   var started_at = new Date();
 
-  var requests = 100000;
-  var concurrency = 1000;
+  var requests = 200000;
+  var concurrency = 5000;
 
   var progress = new ProgressBar(':bar', { total: requests , width: 50 });
 
@@ -97,7 +131,6 @@ function run_tests () {
 
 
     table.push(
-        { 'Protocol':   protocol                        },
         { 'Requests':   requests                        },
         { 'Total time': took + ' ms'                    },
         { 'Errored':    errored.length                  },
