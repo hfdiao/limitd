@@ -1,20 +1,21 @@
 const EventEmitter = require('events').EventEmitter;
 
-const util   = require('util');
-const logger = require('./lib/logger');
-const _      = require('lodash');
-const net = require('net');
-const Buckets = require('./lib/buckets');
+const util    = require('util');
+const logger  = require('./lib/logger');
+const _       = require('lodash');
+const net     = require('net');
+const LimitDB = require('limitdb');
 
-const RequestHandler = require('./lib/pipeline/RequestHandler');
-const RequestDecoder = require('./lib/pipeline/RequestDecoder');
+const RequestHandler  = require('./lib/pipeline/RequestHandler');
+const RequestDecoder  = require('./lib/pipeline/RequestDecoder');
 const ResponseEncoder = require('./lib/pipeline/ResponseEncoder');
+
 const lps = require('length-prefixed-stream');
-const lps_encode = require('./lib/lps_encode');
+
 const validateConfig = require('./lib/config_validator');
+
 const agent = require('auth0-instrumentation');
 
-const db = require('./lib/db');
 const enableDestroy = require('server-destroy');
 
 const defaults = {
@@ -58,8 +59,10 @@ function LimitdServer (options) {
     self.emit('error', err);
   });
 
-  this._db = db(this._config.db);
-  this._buckets = new Buckets(this._db, this._config);
+  this._db = new LimitDB({
+    path: typeof this._config.db === 'string' ? this._config.db : this._config.db.path,
+    types: this._config.buckets
+  });
 
   agent.init({
     'name': 'limitd'
@@ -99,6 +102,12 @@ LimitdServer.prototype._handler = function (socket) {
   const request_handler = new RequestHandler({
     buckets: this._buckets,
     logger: this._logger,
+    db: this._db,
+  });
+
+  request_handler.once('error', (err) => {
+    log.error(_.extend(sockets_details, { err }), 'Error detected in the request pipeline.');
+    return socket.end();
   });
 
   const encoder = new ResponseEncoder();
@@ -107,7 +116,6 @@ LimitdServer.prototype._handler = function (socket) {
         .pipe(decoder)
         .pipe(request_handler)
         .pipe(encoder)
-        .pipe(lps_encode())
         .pipe(socket);
 };
 

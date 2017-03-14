@@ -69,7 +69,7 @@ describe('limitd server', function () {
     });
 
     it('should work with an override on a fixed bucket', function (done) {
-      async.map(_.range(0, 2), function (i, cb) {
+      async.map(_.range(2), function (i, cb) {
         client.take('wrong_password', 'dudu', cb);
       }, function (err, results) {
         if (err) return done(err);
@@ -224,7 +224,7 @@ describe('limitd server', function () {
     client.take('ip', '211.45.66.1', function (err) {
       if (err) return done(err);
       setTimeout(function () {
-        server._db.create('ip').get('211.45.66.1', function (err, result) {
+        server._db._types['ip'].db.get('211.45.66.1', function (err, result) {
           assert.isUndefined(result);
           done();
         });
@@ -235,9 +235,9 @@ describe('limitd server', function () {
 
   describe('PUT', function () {
     it('should restore the bucket when reseting', function (done) {
-      client.take('ip', '211.123.12.12', function (err, response) {
+      client.take('ip', '211.123.12.12', function (err) {
         if (err) return done(err);
-        client.put('ip', '211.123.12.12', function (err, response) {
+        client.put('ip', '211.123.12.12', function (err, result) {
           if (err) return done(err);
           client.take('ip', '211.123.12.12', function (err, response) {
             if (err) return done(err);

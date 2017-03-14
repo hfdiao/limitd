@@ -9,7 +9,7 @@ const path     = require('path');
 const fs       = require('fs');
 const yaml     = require('js-yaml');
 const _        = require('lodash');
-const profiler = require('v8-profiler');
+// const profiler = require('v8-profiler');
 
 const LimitdServer = require('../server');
 
