@@ -77,8 +77,13 @@ function LimitdServer (options) {
 util.inherits(LimitdServer, EventEmitter);
 
 LimitdServer.prototype._handler = function (socket) {
-  const sockets_details = _.pick(socket, ['remoteAddress', 'remotePort']);
+  const sockets_details = {
+    remoteAddress: socket.remoteAddress,
+    remotePort: socket.remotePort
+  };
+
   const log = this._logger;
+
   socket.on('error', function (err) {
     log.debug(_.extend(sockets_details, {
       err: {

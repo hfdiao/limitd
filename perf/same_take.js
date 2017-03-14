@@ -93,6 +93,10 @@ if (cluster.isMaster) {
       if (results.length === cores * requests) {
         render_results(started_at, _.flatten(results));
         server.kill('SIGINT');
+        try{
+          const db_file = path.join(__dirname, 'db', 'perf.tests.db');
+          rimraf.sync(db_file);
+        } catch(err){}
       }
       worker.kill();
     });
