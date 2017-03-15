@@ -121,6 +121,7 @@ LimitdServer.prototype._handler = function (socket) {
         .pipe(decoder)
         .pipe(request_handler)
         .pipe(encoder)
+        .pipe(lps.encode())
         .pipe(socket);
 };
 

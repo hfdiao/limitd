@@ -1,15 +1,17 @@
-var LimitdServer = require('..').Server;
+const LimitdServer = require('..').Server;
 
-var Socket = require('net').Socket;
-var rimraf = require('rimraf');
-var _ = require('lodash');
-var path = require('path');
+const Socket = require('net').Socket;
+const rimraf = require('rimraf');
+const _ = require('lodash');
+const path = require('path');
+const lps = require('length-prefixed-stream');
 
 describe('wrong requests', function () {
   var server, address;
 
   before(function (done) {
-    var db_file = path.join(__dirname, 'dbs', 'unexpected_conditions.db');
+    const db_file = path.join(__dirname, 'dbs', 'unexpected_conditions.db');
+
     try{
       rimraf.sync(db_file);
     } catch(err){}
@@ -32,14 +34,14 @@ describe('wrong requests', function () {
   });
 
   it('should disconnect the socket on unknown message', function (done) {
-    var socket = new Socket();
-    var ResponseMessage  = require('../messages/protocol_buffers').Response;
+    const socket = new Socket();
+    const Response  = require('limitd-protocol').Response;
     // I'm going to make the server fail by sending a Response message from the client.
     socket.connect(address.port, address.address)
       .once('connect', function () {
-        socket.write(ResponseMessage.encodeDelimited({
-          request_id: '123'
-        }).finish());
+        const stream = lps.encode();
+        stream.pipe(socket);
+        stream.write(Response.encode({ request_id: '123' }));
       }).once('close', function () {
         done();
       });
