@@ -10,6 +10,7 @@ const os      = require('os');
 
 const requests =  100000;
 const concurrency = 1000;
+const client_count =  os.cpus().length - 1;
 
 function spawn_server() {
 
@@ -60,8 +61,8 @@ function render_results(started_at, results) {
   var table = new Table();
 
   table.push(
-      { 'Requests':    requests * os.cpus().length     },
-      { 'Concurrency': concurrency * os.cpus().length  },
+      { 'Requests':    requests * client_count         },
+      { 'Concurrency': concurrency * client_count      },
       { 'Total time':  took + ' ms'                    },
       { 'Errored':     errored.length                  },
       { 'Mean':        stats.amean().toFixed(2)        },
@@ -79,18 +80,17 @@ if (cluster.isMaster) {
   process.title = 'limitd perfomance master';
 
   var results = [];
-  const cores = os.cpus().length;
   const started_at = new Date();
 
   const server = spawn_server();
 
-  const workers = _.range(cores).map(() => cluster.fork());
+  const workers = _.range(client_count).map(() => cluster.fork());
 
 
   workers.forEach((worker) => {
     worker.once('message', (message) => {
       results = results.concat(message.results);
-      if (results.length === cores * requests) {
+      if (results.length === client_count * requests) {
         render_results(started_at, _.flatten(results));
         server.kill('SIGINT');
         try{
