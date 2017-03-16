@@ -84,6 +84,8 @@ if (cluster.isMaster) {
 
   const server = spawn_server();
 
+  console.log('server pid:', server.pid);
+
   const workers = _.range(client_count).map(() => cluster.fork());
 
 

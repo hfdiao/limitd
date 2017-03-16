@@ -2,14 +2,12 @@
 
 process.title = 'limitd server';
 
-console.log(process.pid);
-
 const program  = require('commander');
 const path     = require('path');
 const fs       = require('fs');
 const yaml     = require('js-yaml');
 const _        = require('lodash');
-// const profiler = require('v8-profiler');
+const profiler = require('v8-profiler');
 
 const LimitdServer = require('../server');
 
@@ -36,6 +34,11 @@ if (config.configFile) {
       process.exit(1);
     }, 500);
   }
+}
+
+if (typeof config.db === 'undefined') {
+  console.error('missing database path');
+  return process.exit(1);
 }
 
 const server = new LimitdServer(config);
