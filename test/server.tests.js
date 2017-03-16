@@ -206,11 +206,12 @@ describe('limitd server', function () {
           var waited = Date.now() - waitingSince;
           assert.ok(response.conformant);
           assert.ok(response.delayed);
-          expect(waited).to.be.closeTo(600, 20);
+          expect(waited).to.be.closeTo(600, 100);
           done();
         });
       });
     });
+
   });
 
   it('should fail when the bucket type doesnt exist', function (done) {
