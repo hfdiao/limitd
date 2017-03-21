@@ -77,6 +77,8 @@ function LimitdServer (options) {
 util.inherits(LimitdServer, EventEmitter);
 
 LimitdServer.prototype._handler = function (socket) {
+  socket.setNoDelay();
+
   const sockets_details = {
     remoteAddress: socket.remoteAddress,
     remotePort: socket.remotePort
@@ -105,7 +107,6 @@ LimitdServer.prototype._handler = function (socket) {
   });
 
   const request_handler = new RequestHandler({
-    buckets: this._buckets,
     logger: this._logger,
     db: this._db,
   });

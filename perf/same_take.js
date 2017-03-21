@@ -8,8 +8,9 @@ const spawn   = require('child_process').spawn;
 const cluster = require('cluster');
 const os      = require('os');
 
-const requests =  100000;
-const concurrency = 1000;
+
+const requests =  200000;
+const concurrency = 2000;
 const client_count =  os.cpus().length - 1;
 
 function spawn_server() {
@@ -21,7 +22,7 @@ function spawn_server() {
 
   const run_with_profile = process.argv.indexOf('--profile') > -1;
   const flame_graph = process.argv.indexOf('--0x') > -1;
-
+  const debug = process.argv.indexOf('--debug') > -1;
 
   var limitd_args = [
                       path.normalize(__dirname + '/../bin/limitd'),
@@ -46,7 +47,13 @@ function spawn_server() {
     limitd_args.push('--profile');
   }
 
-  const executable = flame_graph ? '0x' : 'node';
+  var executable = 'node';
+
+  if (flame_graph) {
+    executable = '0x';
+  } else if (debug) {
+    executable = 'node-debug';
+  }
 
   return spawn(executable, limitd_args, { stdio: 'inherit' });
 }
@@ -110,7 +117,7 @@ if (cluster.isMaster) {
 
 const LimitdClient = require('limitd-client');
 
-const clients = _.range(0, 10).map(() => new LimitdClient({host: 'limitd://localhost:19001', timeout: 60000 }));
+const clients = _.range(10).map(() => new LimitdClient({host: 'limitd://localhost:19001', timeout: 60000 }));
 
 clients.forEach(c => c.once('ready', waitAll));
 
@@ -120,21 +127,25 @@ function waitAll(){
   }
 }
 
+
 function run_tests () {
+  // var snapshot1, snapshot2;
+
   async.mapLimit(_.range(requests), concurrency, function (i, done) {
     const date = new Date();
-    const client = clients.shift();
-    clients.push(client);
+    const clientIndex = i % clients.length;
+    const client = clients[clientIndex];
     return client.take('ip', '10.0.0.1', function (err, result) {
-    // return client.take('ip', `${process.pid}-${i}-pipi`, function (err, result) {
       if (err) {
         console.dir(err);
         return process.exit(1);
       }
+
+      const took1 = new Date() - date;
       done(null, {
         err: err,
         result: result,
-        took: new Date() - date
+        took: took1
       });
     });
 
@@ -144,10 +155,29 @@ function run_tests () {
       return process.exit(1);
     }
 
+    // console.log(`slow gc cycles: ${slowGC.length}`);
+
     process.send({
       type: 'finish',
       results
     });
+
+    // snapshot1.export()
+    //   .pipe(fs.createWriteStream(`snapshot-1-${Date.now()}.heapsnapshot`))
+    //   .on('finish', () => {
+    //     snapshot1.delete();
+
+    //     snapshot2.export()
+    //       .pipe(fs.createWriteStream(`snapshot-2-${Date.now()}.heapsnapshot`))
+    //       .on('finish', () => {
+    //         snapshot2.delete();
+    //         process.send({
+    //           type: 'finish',
+    //           results
+    //         });
+    //       });
+    //   });
+
   });
 }
 
