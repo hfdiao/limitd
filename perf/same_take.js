@@ -6,12 +6,10 @@ const Stats   = require('fast-stats').Stats;
 const Table   = require('cli-table');
 const spawn   = require('child_process').spawn;
 const cluster = require('cluster');
-const os      = require('os');
 
-
-const requests =  200000;
+const requests  =  20000;
 const concurrency = 2000;
-const client_count =  os.cpus().length - 1;
+const client_count =  1; //os.cpus().length - 1;
 
 function spawn_server() {
 
@@ -100,7 +98,8 @@ if (cluster.isMaster) {
     worker.once('message', (message) => {
       results = results.concat(message.results);
       if (results.length === client_count * requests) {
-        render_results(started_at, _.flatten(results));
+        console.log('rendering stats');
+        render_results(started_at, results);
         server.kill('SIGINT');
         try{
           const db_file = path.join(__dirname, 'db', 'perf.tests.db');
@@ -117,9 +116,17 @@ if (cluster.isMaster) {
 
 const LimitdClient = require('limitd-client');
 
-const clients = _.range(10).map(() => new LimitdClient({host: 'limitd://localhost:19001', timeout: 60000 }));
+const clients = _.range(10).map(() => {
+  const client = new LimitdClient({
+    host: '/tmp/limitd.socket',
+    timeout: 60000,
+    protocol_version: 2
+  });
 
-clients.forEach(c => c.once('ready', waitAll));
+  client.once('ready', waitAll);
+
+  return client;
+});
 
 function waitAll(){
   if(clients.every(c => c.socket && c.socket.connected)){
